@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.38" />
+
+
+<title>Fire Emblem Heroes data with rvest - Red Stone Data</title>
+<meta property="og:title" content="Fire Emblem Heroes data with rvest - Red Stone Data">
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/rstudio/blogdown">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">3 min read</span>
+    
+
+    <h1 class="article-title">Fire Emblem Heroes data with rvest</h1>
+
+    
+    <span class="article-date">2018/04/04</span>
+    
+
+    <div class="article-content">
+      <div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the <code>rvest</code> package to scrape data from the Fire Emblem Heroes gamepedia page (<a href="https://feheroes.gamepedia.com/Main_Page" class="uri">https://feheroes.gamepedia.com/Main_Page</a>)</p>
+</div>
+<div id="loading-packages" class="section level1">
+<h1>Loading packages</h1>
+<pre class="r"><code>library(&quot;rvest&quot;)</code></pre>
+<pre><code>## Warning: package &#39;rvest&#39; was built under R version 3.4.4</code></pre>
+</div>
+<div id="scraping-data" class="section level1">
+<h1>Scraping data</h1>
+<p>Fire Emblem Heroes is a tactical RPG game in which players compete against the AI by trying to defeat their teams, composed of up to four characters (heroes). We’ll start then by collecting information on each available character, from the page assigned to the <code>url</code> variable:</p>
+<pre class="r"><code>url &lt;- &quot;https://feheroes.gamepedia.com/Stats_Table&quot;
+
+webpage &lt;- read_html(url)</code></pre>
+<p>We can use the <code>html_table</code> function to extract the table, so let’s start there:</p>
+<pre class="r"><code>max_stats &lt;- webpage %&gt;% 
+    html_table()
+max_stats &lt;- as.data.frame(max_stats)
+head(max_stats)</code></pre>
+<pre><code>##   X1                          X2 X3 X4 X5 X6 X7 X8 X9 X10
+## 1 NA                        Abel NA NA 39 33 32 25 25 154
+## 2 NA                     Alfonse NA NA 43 35 25 32 22 157
+## 3 NA Alfonse (Hares at the Fair) NA NA 41 35 33 30 18 157
+## 4 NA                         Alm NA NA 45 33 30 28 22 158
+## 5 NA                      Amelia NA NA 47 34 34 35 23 173
+## 6 NA                        Anna NA NA 41 29 38 22 28 158</code></pre>
+<p>As we can see, the function worked fine, except some of the things we want, namely the hero’s weapon and movement types are given as images, meaning that we’ll have to do just a bit more work to get that info.</p>
+<p>Let’s get the table information again, but this time, we’ll do it in a bit more roundabout fashion. The information we want, that is, a hero’s weapon and movement types, as well as their stats, are contained in the <code>&lt;tr&gt;</code> elements of the html. Therefore, we can use <code>rvest</code>’s <code>html_nodes</code> function to extract the relevant nodes. This can then be passed to the <code>html_attr</code> function to extract the “data-weapon-type” and “data-move-type” attributes of the <code>&lt;tr&gt;</code> elements and include them back into our data.frame.</p>
+<pre class="r"><code>max_stats$WeaponType &lt;- read_html(url) %&gt;%
+    html_nodes(&quot;tr&quot;) %&gt;%
+    html_attr(&quot;data-weapon-type&quot;)
+
+max_stats$MoveType &lt;- read_html(url) %&gt;%
+    html_nodes(&quot;tr&quot;) %&gt;%
+    html_attr(&quot;data-move-type&quot;)</code></pre>
+<p>Let’s just tidy up our <code>max_stats</code> data.frame. Note that I’ve changed the original “Total” column’s name to “BST”, for “base stat total”.</p>
+<pre class="r"><code>max_stats &lt;- Filter(function(x)!all(is.na(x)), max_stats)
+names(max_stats) &lt;- c(&quot;Name&quot;, &quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;, &quot;BST&quot;, &quot;WeaponType&quot;, &quot;MoveType&quot;)
+head(max_stats)</code></pre>
+<pre><code>##                          Name HP ATK SPD DEF RES BST WeaponType MoveType
+## 1                        Abel 39  33  32  25  25 154 Blue Lance  Cavalry
+## 2                     Alfonse 43  35  25  32  22 157  Red Sword Infantry
+## 3 Alfonse (Hares at the Fair) 41  35  33  30  18 157  Green Axe  Cavalry
+## 4                         Alm 45  33  30  28  22 158  Red Sword Infantry
+## 5                      Amelia 47  34  34  35  23 173  Green Axe  Armored
+## 6                        Anna 41  29  38  22  28 158  Green Axe Infantry</code></pre>
+<p>There are a few other tables with information about the game’s characters on the site, but for now this information is enough to get started. In my next post, I’ll start doing some exploratory analyses and see what kind of data we got.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+
