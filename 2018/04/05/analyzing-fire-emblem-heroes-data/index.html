@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.38" />
+
+
+<title>Analyzing Fire Emblem Heroes data - Red Stone Data</title>
+<meta property="og:title" content="Analyzing Fire Emblem Heroes data - Red Stone Data">
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.svg"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/pedrostrusso/redstone">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/russopedro/">LinkedIn</a></li>
+    
+    <li><a href="https://twitter.com/petertherusso">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">6 min read</span>
+    
+
+    <h1 class="article-title">Analyzing Fire Emblem Heroes data</h1>
+
+    
+    <span class="article-date">2018/04/05</span>
+    
+
+    <div class="article-content">
+      <div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>This is a continuation of my previous <a href="https://pedrostrusso.github.io/2018/04/04/fire-emblem-heroes-data-with-rvest/">post</a>, in which we scraped data about the mobile game Fire Emblem Heroes using the R package <code>rvest</code>. This time, we’re going to do some exploratory data analysis to get a better idea about the characters in the game.</p>
+</div>
+<div id="loading-libraries" class="section level1">
+<h1>Loading libraries</h1>
+<pre class="r"><code>library(ggplot2)
+library(reshape2)
+library(ggthemes)
+library(proxy)
+library(ggdendro)
+library(WGCNA)
+library(dynamicTreeCut)</code></pre>
+</div>
+<div id="data-analysis" class="section level1">
+<h1>Data analysis</h1>
+<p>In my last post, we obtained character stats data, as well as movement and weapon type information:</p>
+<pre class="r"><code>head(max_stats)</code></pre>
+<pre><code>##                          Name HP ATK SPD DEF RES BST WeaponType MoveType
+## 1                        Abel 39  33  32  25  25 154 Blue Lance  Cavalry
+## 2                     Alfonse 43  35  25  32  22 157  Red Sword Infantry
+## 3 Alfonse (Hares at the Fair) 41  35  33  30  18 157  Green Axe  Cavalry
+## 4                         Alm 45  33  30  28  22 158  Red Sword Infantry
+## 5                      Amelia 47  34  34  35  23 173  Green Axe  Armored
+## 6                        Anna 41  29  38  22  28 158  Green Axe Infantry</code></pre>
+<div id="distributions" class="section level2">
+<h2>Distributions</h2>
+<p>Let’s start by looking at the distributions of each stat type to see how these values are spread out. I’ll remove the BST (base stat total) column for now. If you remember from my previous post, the BST is the sum of all other stats, and therefore it has a different range of values, which will get in the way of our visualization.</p>
+<pre class="r"><code>melt_stats &lt;- melt(max_stats[, -7]) # Removing the BST column
+ggplot(data=melt_stats, aes(value)) +
+    geom_density(size=1, color=&quot;red&quot;) +
+    facet_grid(~variable) +
+    theme_few() +
+    xlab(&quot;Value&quot;) +
+    ylab(&quot;Density&quot;) +
+    ggtitle(&quot;Stat densities&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>We can see that most heroes have an ATK stat of around 32, and that this stat’s distribution is not very wide, meaning that there is not that big a difference between individual units’ offensive power. The DEF stat, however, seems to be a bit more distributed among the characters. We can, of course, compute each stat’s variance and observe this.</p>
+<pre class="r"><code>var(max_stats$ATK)</code></pre>
+<pre><code>## [1] 11.87002</code></pre>
+<pre class="r"><code>var(max_stats$DEF)</code></pre>
+<pre><code>## [1] 40.78422</code></pre>
+<p>Anyway, let’s take a quick look at the BST column now. This can give us a quick-and-dirty idea of a unit’s overall power. It’s worth noting that the BST is also used by the game as a classification measure when pairing up players against each other in the Arena mode of the game, where players using characters with higher BSTs are pitted against each other. It also reflects in the number of points you get in the Arena, which allows you to challenge even stronger players given time. So let’s take a look at the heroes with the highest BST scores, which will maximize our Arena score (without considering other BST increasing factors, such as weapon power and skills).</p>
+<pre class="r"><code>top_heroes &lt;- max_stats[order(max_stats$BST, decreasing = F), ]
+top_heroes &lt;- tail(top_heroes, 20)
+
+ggplot(top_heroes, 
+       aes(factor(top_heroes$Name, levels=top_heroes$Name), BST)) +
+    geom_bar(stat=&quot;identity&quot;, fill=&quot;red&quot;) +
+    coord_flip() + 
+    scale_y_continuous(limits=c(0, 190), breaks=seq(0, 190, 20)) +
+    ggthemes::theme_few() +
+    xlab(&quot;Heroes&quot;) +
+    ggtitle(&quot;Top 20 heroes with highest BST&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>The barplot we just created might not seem very informative at first, given the similar BST values shown, but we do find something interesting once we include units’ movement type information:</p>
+<pre class="r"><code>ggplot(top_heroes, 
+       aes(factor(top_heroes$Name, levels=top_heroes$Name), BST, fill=MoveType)) +
+    geom_bar(stat=&quot;identity&quot;) +
+    coord_flip() + 
+    scale_y_continuous(limits=c(0, 190), breaks=seq(0, 190, 20)) +
+    ggthemes::theme_few() +
+    xlab(&quot;Heroes&quot;) +
+    ggtitle(&quot;Top 20 heroes with highest BST + move type&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>Armored units have the highest BST! …This really should not come as a surprise to most players; the whole idea of the Armored class is to have higher stats than average to compensate for their limited movement. One cool thing of note though is the inclusion of Myrrh, a flying type unit, in our top 20 BST list. Myrrh is a “Breath” weapon user (a.k.a. a <del>dragon</del> manakete), which explains a bit why her BST is higher than average (although the next highest “Breath” user, Nowi, only appears at #30, 12 units below).</p>
+</div>
+<div id="clustering-analysis" class="section level2">
+<h2>Clustering analysis</h2>
+<p>Let’s try using some clustering analysis techniques to see if we can see any kind of cluster of units based on their stats. With this we should be able to identify similarly built characters or archetypes. I’ll be using agglomerative clustering with the <code>hclust</code> function euclidean distance. Let’s remove our categorical variables and the BST column for now.</p>
+<pre class="r"><code>stats_only &lt;- max_stats[, -c(7, 8, 9)]
+rownames(stats_only) &lt;- stats_only$Name
+stats_only$Name &lt;- NULL
+
+d &lt;- proxy::dist(stats_only, method=&quot;euclidean&quot;)
+fit &lt;- hclust(d, method=&quot;ward.D&quot;)
+dend &lt;- ggdendro::dendro_data(fit)
+
+dend_order &lt;- fit$labels[fit$order]
+
+dendro &lt;-
+    ggdendro::ggdendrogram(dend, rotate=FALSE) +
+    scale_x_continuous(expand = c(0, 0.5), 
+                       labels=dend_order, 
+                       breaks=1:length(dend_order)) +
+    scale_y_continuous(expand = c(0.02, 0)) +
+    ggtitle(&quot;Hero similarity dendrogram&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))
+
+dendro</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>I’ll use the <code>cutreeDynamic</code> function from the <code>dynamicTreeCut</code> package to cut our dendrogram into clusters. This package attempts to automatically define the best number of clusters based on the shape of the dendrogram, so we don’t have to worry about selecting an aribitrary number of clusters. I’ll also use the <code>labels2colors</code> function from the <code>WGCNA</code> package to obtain a color for each cluster underneath the dendrogram, and the <code>plotDendroAndColors</code> function so we can see the dendrogram. These packages were originally developed to visualize clusters of genes in Bioinformatics analyses. Gotta love that interdisciplinarity!</p>
+<p>The WGCNA package also provides a function with base R to plot the dendrogram with colors, but since I prefer ggplot2, I’ll be using a few functions from the <code>grid</code> and <code>gridExtra</code> packages. A BIG shout out to the StackOverflow members in <a href="https://stackoverflow.com/questions/19926697/ggplot2-and-ggdendro-plotting-color-bars-under-the-node-leaves">this</a> and <a href="https://stackoverflow.com/questions/13294952/left-align-two-graph-edges-ggplot">this</a> topic for the insights in how to align a dendrogram and how to combine and align two ggplot graph images.</p>
+<pre class="r"><code>dynamicMods &lt;- dynamicTreeCut::cutreeDynamic(dendro=fit)                   
+dynamicColors &lt;- WGCNA::labels2colors(dynamicMods)
+
+out &lt;- data.frame(chars=rownames(stats_only), 
+                  modules=dynamicMods, 
+                  colors=dynamicColors,
+                  stringsAsFactors=FALSE)
+
+out &lt;- out[match(dend_order, out$chars), ]
+
+clusters &lt;- ggplot(out, aes(factor(chars, levels=chars), y=1, fill=colors)) +
+            geom_tile() +
+            scale_fill_identity() +
+            scale_y_continuous(expand=c(0, 0)) +
+            theme(axis.title=element_blank(),
+                axis.ticks=element_blank(),
+                axis.text=element_blank(),
+                legend.position=&quot;none&quot;,
+                plot.title = element_text(hjust = 0.5))
+
+gp1 &lt;- ggplot2::ggplotGrob(dendro)
+gp2 &lt;- ggplot2::ggplotGrob(clusters)
+
+maxWidth &lt;- grid::unit.pmax(gp1$widths[2:5], gp2$widths[2:5])
+gp1$widths[2:5] &lt;- as.list(maxWidth)
+gp2$widths[2:5] &lt;- as.list(maxWidth)
+g &lt;- gridExtra::arrangeGrob(gp1, gp2, ncol=1,heights=c(9/10, 1/10))
+grid::grid.draw(g)</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>As we can see we got 8 nice clusters, with the turquoise cluster being the largest. Let’s include cluster information into our data and finish this post with a few boxplots so we can start getting a feel for each cluster.</p>
+<pre class="r"><code>max_stats$label &lt;- dynamicColors
+
+max_stats2 &lt;- max_stats
+max_stats2$BST &lt;- NULL
+
+melt_stats2 &lt;- melt(max_stats2)</code></pre>
+<pre><code>## Using Name, WeaponType, MoveType, label as id variables</code></pre>
+<pre class="r"><code>ggplot(melt_stats2, aes(value)) +
+    geom_boxplot(aes(x=variable, y=value, fill=variable)) +
+    facet_grid(~label) + 
+    theme_few() +
+    theme(legend.title=element_blank(),
+          legend.position = &quot;bottom&quot;,
+          axis.title=element_blank(), 
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          plot.title = element_text(hjust = 0.5)) +
+    ggtitle(&quot;Stat boxplots by cluster&quot;)</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

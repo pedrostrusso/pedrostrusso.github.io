@@ -17,7 +17,7 @@
       <pubDate>Wed, 04 Apr 2018 00:00:00 +0000</pubDate>
       
       <guid>/2018/04/04/fire-emblem-heroes-data-with-rvest/</guid>
-      <description>IntroductionIn this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the rvest package to scrape data from the Fire Emblem Heroes gamepedia page (https://feheroes.gamepedia.com/Main_Page)
+      <description>IntroductionIn this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the rvest package to scrape data from the Fire Emblem Heroes Gamepedia page
 Loading packageslibrary(&amp;quot;rvest&amp;quot;)## Warning: package &amp;#39;rvest&amp;#39; was built under R version 3.4.4Scraping dataFire Emblem Heroes is a tactical RPG game in which players compete against the AI by trying to defeat their teams, composed of up to four characters (heroes).</description>
     </item>
     

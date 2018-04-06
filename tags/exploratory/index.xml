@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Fire Emblem on Red Stone Data</title>
-    <link>/tags/fire-emblem/</link>
-    <description>Recent content in Fire Emblem on Red Stone Data</description>
+    <title>Exploratory on Red Stone Data</title>
+    <link>/tags/exploratory/</link>
+    <description>Recent content in Exploratory on Red Stone Data</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Thu, 05 Apr 2018 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="/tags/fire-emblem/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/exploratory/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
@@ -19,16 +19,6 @@
       <guid>/2018/04/05/analyzing-fire-emblem-heroes-data/</guid>
       <description>IntroductionThis is a continuation of my previous post, in which we scraped data about the mobile game Fire Emblem Heroes using the R package rvest. This time, we’re going to do some exploratory data analysis to get a better idea about the characters in the game.
 Loading librarieslibrary(ggplot2)library(reshape2)library(ggthemes)library(proxy)library(ggdendro)library(WGCNA)library(dynamicTreeCut)Data analysisIn my last post, we obtained character stats data, as well as movement and weapon type information:</description>
-    </item>
-    
-    <item>
-      <title>Fire Emblem Heroes data with rvest</title>
-      <link>/2018/04/04/fire-emblem-heroes-data-with-rvest/</link>
-      <pubDate>Wed, 04 Apr 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/2018/04/04/fire-emblem-heroes-data-with-rvest/</guid>
-      <description>IntroductionIn this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the rvest package to scrape data from the Fire Emblem Heroes Gamepedia page
-Loading packageslibrary(&amp;quot;rvest&amp;quot;)## Warning: package &amp;#39;rvest&amp;#39; was built under R version 3.4.4Scraping dataFire Emblem Heroes is a tactical RPG game in which players compete against the AI by trying to defeat their teams, composed of up to four characters (heroes).</description>
     </item>
     
   </channel>

@@ -73,7 +73,7 @@
     <div class="article-content">
       <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>In this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the <code>rvest</code> package to scrape data from the Fire Emblem Heroes gamepedia page (<a href="https://feheroes.gamepedia.com/Main_Page" class="uri">https://feheroes.gamepedia.com/Main_Page</a>)</p>
+<p>In this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the <code>rvest</code> package to scrape data from the <a href="https://feheroes.gamepedia.com/Main_Page">Fire Emblem Heroes Gamepedia page</a></p>
 </div>
 <div id="loading-packages" class="section level1">
 <h1>Loading packages</h1>
@@ -109,7 +109,8 @@ max_stats$MoveType &lt;- read_html(url) %&gt;%
     html_attr(&quot;data-move-type&quot;)</code></pre>
 <p>Let’s just tidy up our <code>max_stats</code> data.frame. Note that I’ve changed the original “Total” column’s name to “BST”, for “base stat total”.</p>
 <pre class="r"><code>max_stats &lt;- Filter(function(x)!all(is.na(x)), max_stats)
-names(max_stats) &lt;- c(&quot;Name&quot;, &quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;, &quot;BST&quot;, &quot;WeaponType&quot;, &quot;MoveType&quot;)
+names(max_stats) &lt;- c(&quot;Name&quot;, &quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;, 
+                      &quot;BST&quot;, &quot;WeaponType&quot;, &quot;MoveType&quot;)
 head(max_stats)</code></pre>
 <pre><code>##                          Name HP ATK SPD DEF RES BST WeaponType MoveType
 ## 1                        Abel 39  33  32  25  25 154 Blue Lance  Cavalry
