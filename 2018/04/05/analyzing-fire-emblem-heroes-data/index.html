@@ -61,7 +61,7 @@
 
   <article class="article">
     
-    <span class="article-duration">6 min read</span>
+    <span class="article-duration">5 min read</span>
     
 
     <h1 class="article-title">Analyzing Fire Emblem Heroes data</h1>
@@ -202,9 +202,9 @@ grid::grid.draw(g)</code></pre>
 max_stats2 &lt;- max_stats
 max_stats2$BST &lt;- NULL
 
-melt_stats2 &lt;- melt(max_stats2)</code></pre>
-<pre><code>## Using Name, WeaponType, MoveType, label as id variables</code></pre>
-<pre class="r"><code>ggplot(melt_stats2, aes(value)) +
+melt_stats2 &lt;- melt(max_stats2)
+
+ggplot(melt_stats2, aes(value)) +
     geom_boxplot(aes(x=variable, y=value, fill=variable)) +
     facet_grid(~label) + 
     theme_few() +
