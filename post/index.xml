@@ -17,8 +17,9 @@
       <pubDate>Thu, 05 Apr 2018 00:00:00 +0000</pubDate>
       
       <guid>/2018/04/05/analyzing-fire-emblem-heroes-data/</guid>
-      <description>IntroductionThis is a continuation of my previous post, in which we scraped data about the mobile game Fire Emblem Heroes using the R package rvest. This time, we’re going to do some exploratory data analysis to get a better idea about the characters in the game.
-Loading librarieslibrary(ggplot2)library(reshape2)library(ggthemes)library(proxy)library(ggdendro)library(WGCNA)library(dynamicTreeCut)Data analysisIn my last post, we obtained character stats data, as well as movement and weapon type information:</description>
+      <description>Introduction(Edited April 18th, 2018)
+This is a continuation of my previous post, in which we scraped data about the mobile game Fire Emblem Heroes using the R package rvest. This time, we’re going to do some exploratory data analysis to get a better idea about the characters in the game and do some clustering analysis on the characters.
+Loading librarieslibrary(ggplot2)library(reshape2)library(ggthemes)library(proxy)library(ggdendro)library(WGCNA)library(dynamicTreeCut)library(ggrepel)Data analysisIn my last post, we obtained character stats data, as well as movement and weapon type information:</description>
     </item>
     
     <item>

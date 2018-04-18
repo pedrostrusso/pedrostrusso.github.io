@@ -61,7 +61,7 @@
 
   <article class="article">
     
-    <span class="article-duration">5 min read</span>
+    <span class="article-duration">9 min read</span>
     
 
     <h1 class="article-title">Analyzing Fire Emblem Heroes data</h1>
@@ -73,7 +73,8 @@
     <div class="article-content">
       <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>This is a continuation of my previous <a href="https://pedrostrusso.github.io/2018/04/04/fire-emblem-heroes-data-with-rvest/">post</a>, in which we scraped data about the mobile game Fire Emblem Heroes using the R package <code>rvest</code>. This time, we’re going to do some exploratory data analysis to get a better idea about the characters in the game.</p>
+<p>(Edited April 18th, 2018)</p>
+<p>This is a continuation of my previous <a href="https://pedrostrusso.github.io/2018/04/04/fire-emblem-heroes-data-with-rvest/">post</a>, in which we scraped data about the mobile game Fire Emblem Heroes using the R package <code>rvest</code>. This time, we’re going to do some exploratory data analysis to get a better idea about the characters in the game and do some clustering analysis on the characters.</p>
 </div>
 <div id="loading-libraries" class="section level1">
 <h1>Loading libraries</h1>
@@ -83,7 +84,8 @@ library(ggthemes)
 library(proxy)
 library(ggdendro)
 library(WGCNA)
-library(dynamicTreeCut)</code></pre>
+library(dynamicTreeCut)
+library(ggrepel)</code></pre>
 </div>
 <div id="data-analysis" class="section level1">
 <h1>Data analysis</h1>
@@ -111,9 +113,9 @@ ggplot(data=melt_stats, aes(value)) +
 <p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
 <p>We can see that most heroes have an ATK stat of around 32, and that this stat’s distribution is not very wide, meaning that there is not that big a difference between individual units’ offensive power. The DEF stat, however, seems to be a bit more distributed among the characters. We can, of course, compute each stat’s variance and observe this.</p>
 <pre class="r"><code>var(max_stats$ATK)</code></pre>
-<pre><code>## [1] 11.87002</code></pre>
+<pre><code>## [1] 11.82872</code></pre>
 <pre class="r"><code>var(max_stats$DEF)</code></pre>
-<pre><code>## [1] 40.78422</code></pre>
+<pre><code>## [1] 40.5983</code></pre>
 <p>Anyway, let’s take a quick look at the BST column now. This can give us a quick-and-dirty idea of a unit’s overall power. It’s worth noting that the BST is also used by the game as a classification measure when pairing up players against each other in the Arena mode of the game, where players using characters with higher BSTs are pitted against each other. It also reflects in the number of points you get in the Arena, which allows you to challenge even stronger players given time. So let’s take a look at the heroes with the highest BST scores, which will maximize our Arena score (without considering other BST increasing factors, such as weapon power and skills).</p>
 <pre class="r"><code>top_heroes &lt;- max_stats[order(max_stats$BST, decreasing = F), ]
 top_heroes &lt;- tail(top_heroes, 20)
@@ -143,12 +145,14 @@ ggplot(top_heroes,
 </div>
 <div id="clustering-analysis" class="section level2">
 <h2>Clustering analysis</h2>
-<p>Let’s try using some clustering analysis techniques to see if we can see any kind of cluster of units based on their stats. With this we should be able to identify similarly built characters or archetypes. I’ll be using agglomerative clustering with the <code>hclust</code> function euclidean distance. Let’s remove our categorical variables and the BST column for now.</p>
+<p>Let’s try using some clustering analysis techniques to see if we can find any kind of cluster of units based on their stats. With this we should be able to identify similarly built characters or archetypes. First we’ll calculate the correlations between each hero’s stats to see how close each of them are. Then, we can use agglomerative clustering with the <code>hclust</code> function and euclidean distance to group our characters and visualize them in a dendrogram. Let’s remove our categorical variables and the BST column for now.</p>
 <pre class="r"><code>stats_only &lt;- max_stats[, -c(7, 8, 9)]
 rownames(stats_only) &lt;- stats_only$Name
 stats_only$Name &lt;- NULL
 
-d &lt;- proxy::dist(stats_only, method=&quot;euclidean&quot;)
+stats_cor &lt;- cor(t(stats_only))
+
+d &lt;- proxy::dist(stats_cor, method=&quot;euclidean&quot;)
 fit &lt;- hclust(d, method=&quot;ward.D&quot;)
 dend &lt;- ggdendro::dendro_data(fit)
 
@@ -165,7 +169,7 @@ dendro &lt;-
 
 dendro</code></pre>
 <p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
-<p>I’ll use the <code>cutreeDynamic</code> function from the <code>dynamicTreeCut</code> package to cut our dendrogram into clusters. This package attempts to automatically define the best number of clusters based on the shape of the dendrogram, so we don’t have to worry about selecting an aribitrary number of clusters. I’ll also use the <code>labels2colors</code> function from the <code>WGCNA</code> package to obtain a color for each cluster underneath the dendrogram, and the <code>plotDendroAndColors</code> function so we can see the dendrogram. These packages were originally developed to visualize clusters of genes in Bioinformatics analyses. Gotta love that interdisciplinarity!</p>
+<p>I’ll use the <code>cutreeDynamic</code> function from the <code>dynamicTreeCut</code> package to cut our dendrogram into clusters. This package attempts to automatically define the best number of clusters based on the shape of the dendrogram, so we don’t have to worry about selecting an aribitrary number of clusters. I’ll also use the <code>labels2colors</code> function from the <code>WGCNA</code> package to obtain a color for each cluster underneath the dendrogram. These packages were originally developed to visualize clusters of genes in Bioinformatics analyses. Gotta love that interdisciplinarity!</p>
 <p>The WGCNA package also provides a function with base R to plot the dendrogram with colors, but since I prefer ggplot2, I’ll be using a few functions from the <code>grid</code> and <code>gridExtra</code> packages. A BIG shout out to the StackOverflow members in <a href="https://stackoverflow.com/questions/19926697/ggplot2-and-ggdendro-plotting-color-bars-under-the-node-leaves">this</a> and <a href="https://stackoverflow.com/questions/13294952/left-align-two-graph-edges-ggplot">this</a> topic for the insights in how to align a dendrogram and how to combine and align two ggplot graph images.</p>
 <pre class="r"><code>dynamicMods &lt;- dynamicTreeCut::cutreeDynamic(dendro=fit)                   
 dynamicColors &lt;- WGCNA::labels2colors(dynamicMods)
@@ -196,7 +200,7 @@ gp2$widths[2:5] &lt;- as.list(maxWidth)
 g &lt;- gridExtra::arrangeGrob(gp1, gp2, ncol=1,heights=c(9/10, 1/10))
 grid::grid.draw(g)</code></pre>
 <p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
-<p>As we can see we got 8 nice clusters, with the turquoise cluster being the largest. Let’s include cluster information into our data and finish this post with a few boxplots so we can start getting a feel for each cluster.</p>
+<p>As we can see we got 7 nice clusters, with the turquoise cluster being the largest. As a side note, the <code>dynamicTreeCut</code> package reserves the “grey” color for elements which weren’t able to be assigned to any other cluster. Usually, one would discard this group, but I’ll keep it in this analysis just so we don’t lose any hero. Let’s include cluster information into our data and take a look at a few boxplots so we can get a feel for each cluster.</p>
 <pre class="r"><code>max_stats$label &lt;- dynamicColors
 
 max_stats2 &lt;- max_stats
@@ -216,6 +220,112 @@ ggplot(melt_stats2, aes(value)) +
           plot.title = element_text(hjust = 0.5)) +
     ggtitle(&quot;Stat boxplots by cluster&quot;)</code></pre>
 <p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>We can also do principal component analysis to see how our clusters represent (most of) the variability of the data. We can see it’s not perfect, but there does seem to be some sense in our clustered points.</p>
+<pre class="r"><code>pca &lt;- prcomp(stats_only)
+
+df_out &lt;- as.data.frame(pca$x)
+df_out$label &lt;- max_stats$label
+head(df_out)</code></pre>
+<pre><code>##                                   PC1       PC2       PC3        PC4
+## Abel                        -1.727858  1.253100 -1.148936 -0.6118986
+## Alfonse                      8.626724 -2.674268 -2.592615 -0.7335428
+## Alfonse (Hares at the Fair)  5.765115  6.114256 -2.334997 -1.8918197
+## Alm                          5.058571  1.167998 -1.279048  2.4418803
+## Amelia                       9.378496  2.547198  2.816638 -1.8185376
+## Anna                        -6.465976  3.767082  3.455966  2.1557244
+##                                     PC5  label
+## Abel                        -0.33728966  green
+## Alfonse                      1.16584188    red
+## Alfonse (Hares at the Fair)  0.08645923  brown
+## Alm                         -1.94807904 yellow
+## Amelia                      -5.88638553  brown
+## Anna                        -4.38269169   grey</code></pre>
+<pre class="r"><code>ggplot(df_out,aes(x=PC1, y=PC2, color=label)) +
+    scale_color_identity() +
+    geom_point(size = 5) + 
+    theme_few() +
+    ggtitle(&quot;Principal Component Analysis&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p>We can use <code>geom_text</code> to check out the units in each cluster:</p>
+<pre class="r"><code>ggplot(df_out,aes(x=PC1, y=PC2, color=label)) +
+    scale_color_identity() +
+    geom_point(size = 5) + 
+    geom_text(label=rownames(df_out), size=3, color=&quot;black&quot;) +
+    theme_few() +
+    ggtitle(&quot;Principal Component Analysis&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>We can now use the <code>by</code> function to find the average stats of heroes within each cluster:</p>
+<pre class="r"><code>stats_label &lt;- as.data.frame(cbind(stats_only, max_stats$label))
+names(stats_label) &lt;- c(&quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;, &quot;label&quot;)
+res &lt;- by(stats_label[, 1:5], stats_label$label, colMeans)</code></pre>
+<p>The stats inside each element of the <code>res</code> list are the average stats of the heroes within each cluster. We can consider these stats, therefore as a sort of representative character for each color group. Let’s try to see now which hero within each cluster is the closest to this average. To do this, we’ll take each group of heroes, subtract the stats of our average hero and take the absolute value of the results, average them for each hero to get a distance measure, and see which hero has the lowest distance.</p>
+<pre class="r"><code>reps &lt;- sapply(unique(as.character(stats_label$label)), USE.NAMES=FALSE, function(color){
+    color_rep &lt;- res[[color]]
+    color_chars &lt;- stats_label[stats_label$label == color,]
+    color_chars$label &lt;- NULL
+    diff_df &lt;- t(abs(t(color_chars) - color_rep))
+    char_dist &lt;- rowSums(diff_df)/ncol(diff_df)
+    closest_char &lt;- char_dist[which.min(char_dist)]
+})
+
+reps_df &lt;- as.data.frame(cbind(unique(as.character(stats_label$label)), reps))
+names(reps_df) &lt;- c(&quot;cluster&quot;, &quot;distance_to_mean&quot;)
+reps_df</code></pre>
+<pre><code>##                                cluster  distance_to_mean
+## Roderick                         green 0.514285714285715
+## Michalis                           red 0.630769230769231
+## Sharena                          brown  1.05789473684211
+## Reinhardt (World of Thracia)    yellow  1.68421052631579
+## Titania                           grey 0.861538461538463
+## L&#39;Arachel                    turquoise  1.10222222222222
+## Catria                            blue  1.33809523809524</code></pre>
+<p>We can now take a look at our PCA plot again and check that our representative heroes lie somewhat centralized in their own clusters:</p>
+<pre class="r"><code>reps &lt;- rownames(reps_df)
+chars &lt;- rownames(df_out)
+
+chars[!chars %in% reps] &lt;- &quot;&quot;
+
+ggplot(df_out,aes(x=PC1, y=PC2, color=label)) +
+    scale_color_identity() +
+    geom_point(size = 5) + 
+    geom_text_repel(label=chars, size=3, color=&quot;black&quot;) +
+    theme_few() +
+    ggtitle(&quot;Principal Component Analysis&quot;) +
+    theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p>To finish things off, let’s take a look at how movement and weapon types are arranged within each cluster. I couldn’t really decide on a better way to visualize this information, so here are two I could come up with:</p>
+<p>A faceted stacked barplot</p>
+<pre class="r"><code>ggplot(max_stats, aes(x=factor(WeaponType))) +
+    geom_bar(stat=&quot;count&quot;, aes(fill=max_stats$MoveType)) +
+    xlab(label=&quot;Weapon type&quot;) +
+    ylab(label=&quot;Count&quot;) +
+    theme(legend.title = element_blank(),
+          plot.title = element_text(hjust = 0.5)) + 
+    coord_flip() +
+    facet_wrap(~label) +
+    ggtitle(&quot;Movement and weapon types by cluster&quot;)</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>A faceted bubble chart (once again, thanks to SO for this <a href="https://stackoverflow.com/questions/15840926/categorical-bubble-plot-for-mapping-studies">link</a>)</p>
+<pre class="r"><code>counts &lt;- paste(max_stats$WeaponType, max_stats$MoveType, max_stats$label)
+
+max_stats$category &lt;- counts
+max_stats$size &lt;- as.numeric(table(max_stats$category)[max_stats$category])
+max_stats$radius &lt;- sqrt(max_stats$size / pi)
+
+ggplot(max_stats, aes(x=factor(WeaponType), y=MoveType)) +
+    geom_point(aes(size=radius*7.5), shape=21, fill=&quot;white&quot;) + 
+    geom_text(aes(label=size), size=4, color = &quot;black&quot;) +
+    scale_size_identity() +
+    xlab(label=&quot;Weapon type&quot;) +
+    ylab(label=&quot;Move type&quot;) +
+    theme(axis.text.x = element_text(angle=90),
+          plot.title = element_text(hjust = 0.5)) + 
+    facet_wrap(~label) +
+    ggtitle(&quot;Movement and weapon types by cluster&quot;)</code></pre>
+<p><img src="/post/2018-04-05-analyzing-fire-emblem-heroes-data_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p>These plots give us a pretty good idea about the composition of each of our clusters. We can see that while Red Sword Infantry characters are dominant in the cast, they’re mostly concentrated in the blue, brown and green clusters. Also, the yellow group seems to be where most armored users wound up. Finally, the most common characters in the turquoise group are mages and staff users. As we can see in our previous boxplots, the turquoise groups is also the one with characters with low defense and HP, and very high resistance, a common stat distribution for magic users like these.</p>
 </div>
 </div>
 
