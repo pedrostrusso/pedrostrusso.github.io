@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.38" />
+
+
+<title>S4 Classes in R with Fire Emblem Heroes Data - Red Stone Data</title>
+<meta property="og:title" content="S4 Classes in R with Fire Emblem Heroes Data - Red Stone Data">
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.svg"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/pedrostrusso/redstone">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/russopedro/">LinkedIn</a></li>
+    
+    <li><a href="https://twitter.com/petertherusso">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">12 min read</span>
+    
+
+    <h1 class="article-title">S4 Classes in R with Fire Emblem Heroes Data</h1>
+
+    
+    <span class="article-date">2018/04/24</span>
+    
+
+    <div class="article-content">
+      <div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Following my last few posts, in this entry we’ll again work with Fire Emblem Heroes data but on the subject of Object-Oriented Programming (OOP) in R. R has been described before as being a bit awkward with respect to OOP, with 3 different types of class systems: S3, S4 and RC. In this quick post, we will focus on S4 classes and use them to build a generic character class. I’ll be more or less following the order of things displayed in <a href="http://adv-r.had.co.nz/OO-essentials.html">this guide</a> by Hadley Wickham.</p>
+</div>
+<div id="loading-packages" class="section level1">
+<h1>Loading packages</h1>
+<pre class="r"><code>library(rvest)
+library(knitr)</code></pre>
+</div>
+<div id="character-structures" class="section level1">
+<h1>Character structures</h1>
+<p>In Fire Emblem Heroes, characters are composed of several different attributes. As we’ve explored in my previous <a href="https://pedrostrusso.github.io/2018/04/05/analyzing-fire-emblem-heroes-data/">post</a>, heroes possess different movement and weapon types, as well as 5 different stat attributes (Hit Points, Attack, Speed, Defense and Resistance), which determine their prowess in battle.</p>
+<p>Additionally, the cast also possess different assist skills (abilities which help in movement, HP recovery, stat increases, etc), special attacks and three passive abilities which vary in effect. There are a few other attributes we could include, but let’s stick to these to keep things simple. The general structure of a character, then, can be thought of as follows:</p>
+<ul>
+<li>Character Name<br />
+</li>
+<li>Movement Type<br />
+</li>
+<li>Weapon Type<br />
+</li>
+<li>Stats
+<ul>
+<li>HP, ATK, SPD, DEF, RES<br />
+</li>
+</ul></li>
+<li>Weapon<br />
+</li>
+<li>Assist Skill<br />
+</li>
+<li>Special Attack<br />
+</li>
+<li>Passives
+<ul>
+<li>A Skill<br />
+</li>
+<li>B Skill<br />
+</li>
+<li>C Skill</li>
+</ul></li>
+</ul>
+</div>
+<div id="collecting-data" class="section level1">
+<h1>Collecting data</h1>
+<p>First of all, we will need some data to populate the character objects we’ll create. To collect data, I’ll be using the <code>rvest</code> package again as I did in my first <a href="https://pedrostrusso.github.io/2018/04/04/fire-emblem-heroes-data-with-rvest/">post</a> to get our character stats, but this time we’ll be needing to combine some information from different tables to fill all our requirements. Please refer to the first post for a bit more detail on what’s going on here. In addition to getting character stats, I’ll be separating character names into the name and their title, and their weapon type into weapon and color.</p>
+<pre class="r"><code>url &lt;- &quot;https://feheroes.gamepedia.com/Stats_Table&quot;
+webpage &lt;- read_html(url)
+max_stats &lt;- webpage %&gt;% 
+    html_table()
+max_stats &lt;- as.data.frame(max_stats)
+
+max_stats$WeaponType &lt;- read_html(url) %&gt;%
+    html_nodes(&quot;tr&quot;) %&gt;%
+    html_attr(&quot;data-weapon-type&quot;)
+
+max_stats$MoveType &lt;- read_html(url) %&gt;%
+    html_nodes(&quot;tr&quot;) %&gt;%
+    html_attr(&quot;data-move-type&quot;)
+
+max_stats &lt;- max_stats[, -c(1, 3, 4)]
+names(max_stats) &lt;- c(&quot;FullName&quot;, &quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;, &quot;BST&quot;, &quot;WeaponType&quot;, &quot;MoveType&quot;)
+
+max_stats$Color &lt;- sapply(max_stats$WeaponType, function(x) strsplit(x, split=&quot; &quot;)[[1]][1])
+max_stats$Weapon &lt;- sapply(max_stats$WeaponType, function(x) strsplit(x, split=&quot; &quot;)[[1]][2])
+
+max_stats$Name &lt;- sapply(max_stats$FullName, function(x) strsplit(x, split=&quot;: &quot;)[[1]][1])
+max_stats$Title &lt;- sapply(max_stats$FullName, function(x) strsplit(x, split=&quot;: &quot;)[[1]][2])
+
+kable(head(max_stats))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">FullName</th>
+<th align="right">HP</th>
+<th align="right">ATK</th>
+<th align="right">SPD</th>
+<th align="right">DEF</th>
+<th align="right">RES</th>
+<th align="right">BST</th>
+<th align="left">WeaponType</th>
+<th align="left">MoveType</th>
+<th align="left">Color</th>
+<th align="left">Weapon</th>
+<th align="left">Name</th>
+<th align="left">Title</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Abel: The Panther</td>
+<td align="right">39</td>
+<td align="right">33</td>
+<td align="right">32</td>
+<td align="right">25</td>
+<td align="right">25</td>
+<td align="right">154</td>
+<td align="left">Blue Lance</td>
+<td align="left">Cavalry</td>
+<td align="left">Blue</td>
+<td align="left">Lance</td>
+<td align="left">Abel</td>
+<td align="left">The Panther</td>
+</tr>
+<tr class="even">
+<td align="left">Alfonse: Prince of Askr</td>
+<td align="right">43</td>
+<td align="right">35</td>
+<td align="right">25</td>
+<td align="right">32</td>
+<td align="right">22</td>
+<td align="right">157</td>
+<td align="left">Red Sword</td>
+<td align="left">Infantry</td>
+<td align="left">Red</td>
+<td align="left">Sword</td>
+<td align="left">Alfonse</td>
+<td align="left">Prince of Askr</td>
+</tr>
+<tr class="odd">
+<td align="left">Alfonse: Spring Prince</td>
+<td align="right">41</td>
+<td align="right">35</td>
+<td align="right">33</td>
+<td align="right">30</td>
+<td align="right">18</td>
+<td align="right">157</td>
+<td align="left">Green Axe</td>
+<td align="left">Cavalry</td>
+<td align="left">Green</td>
+<td align="left">Axe</td>
+<td align="left">Alfonse</td>
+<td align="left">Spring Prince</td>
+</tr>
+<tr class="even">
+<td align="left">Alm: Hero of Prophecy</td>
+<td align="right">45</td>
+<td align="right">33</td>
+<td align="right">30</td>
+<td align="right">28</td>
+<td align="right">22</td>
+<td align="right">158</td>
+<td align="left">Red Sword</td>
+<td align="left">Infantry</td>
+<td align="left">Red</td>
+<td align="left">Sword</td>
+<td align="left">Alm</td>
+<td align="left">Hero of Prophecy</td>
+</tr>
+<tr class="odd">
+<td align="left">Amelia: Rose of the War</td>
+<td align="right">47</td>
+<td align="right">34</td>
+<td align="right">34</td>
+<td align="right">35</td>
+<td align="right">23</td>
+<td align="right">173</td>
+<td align="left">Green Axe</td>
+<td align="left">Armored</td>
+<td align="left">Green</td>
+<td align="left">Axe</td>
+<td align="left">Amelia</td>
+<td align="left">Rose of the War</td>
+</tr>
+<tr class="even">
+<td align="left">Anna: Commander</td>
+<td align="right">41</td>
+<td align="right">29</td>
+<td align="right">38</td>
+<td align="right">22</td>
+<td align="right">28</td>
+<td align="right">158</td>
+<td align="left">Green Axe</td>
+<td align="left">Infantry</td>
+<td align="left">Green</td>
+<td align="left">Axe</td>
+<td align="left">Anna</td>
+<td align="left">Commander</td>
+</tr>
+</tbody>
+</table>
+<p>Now let’s get data about each character’s skills, which includes their weapons, assist skills, special attacks and passives. These are the skills that characters come with by default, but can be inherited from one character to another.</p>
+<pre class="r"><code>url &lt;- &quot;https://feheroes.gamepedia.com/Skills_table&quot;
+webpage &lt;- read_html(url)
+skills &lt;- webpage %&gt;% 
+    html_table()
+skills &lt;- as.data.frame(skills)
+skills &lt;- skills[, -c(1, 3, 4)]
+names(skills) &lt;- c(&quot;FullName&quot;, &quot;WeaponName&quot;, &quot;Assist&quot;, &quot;Special&quot;, &quot;PassiveA&quot;, &quot;PassiveB&quot;, &quot;PassiveC&quot;)
+skills$Name &lt;- sapply(skills$FullName, function(x) strsplit(x, split=&quot;: &quot;)[[1]][1])
+skills$Title &lt;- sapply(skills$FullName, function(x) strsplit(x, split=&quot;: &quot;)[[1]][2])
+
+kable(head(skills))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">FullName</th>
+<th align="left">WeaponName</th>
+<th align="left">Assist</th>
+<th align="left">Special</th>
+<th align="left">PassiveA</th>
+<th align="left">PassiveB</th>
+<th align="left">PassiveC</th>
+<th align="left">Name</th>
+<th align="left">Title</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">???: Masked Knight</td>
+<td align="left">Valaskjálf</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">???</td>
+<td align="left">Masked Knight</td>
+</tr>
+<tr class="even">
+<td align="left">Abel: The Panther</td>
+<td align="left">Brave Lance+</td>
+<td align="left">-</td>
+<td align="left">Aegis</td>
+<td align="left">HP +5</td>
+<td align="left">Swordbreaker 3</td>
+<td align="left">-</td>
+<td align="left">Abel</td>
+<td align="left">The Panther</td>
+</tr>
+<tr class="odd">
+<td align="left">Alfonse: Prince of Askr</td>
+<td align="left">Fólkvangr</td>
+<td align="left">-</td>
+<td align="left">Sol</td>
+<td align="left">Death Blow 3</td>
+<td align="left">-</td>
+<td align="left">Spur Atk 3</td>
+<td align="left">Alfonse</td>
+<td align="left">Prince of Askr</td>
+</tr>
+<tr class="even">
+<td align="left">Alfonse: Spring Prince</td>
+<td align="left">Giant Spoon+</td>
+<td align="left">-</td>
+<td align="left">Noontime</td>
+<td align="left">Sturdy Blow 2</td>
+<td align="left">-</td>
+<td align="left">Def Smoke 3</td>
+<td align="left">Alfonse</td>
+<td align="left">Spring Prince</td>
+</tr>
+<tr class="odd">
+<td align="left">Alm: Hero of Prophecy</td>
+<td align="left">Falchion (Gaiden)</td>
+<td align="left">-</td>
+<td align="left">Draconic Aura</td>
+<td align="left">Attack +3</td>
+<td align="left">Windsweep 3</td>
+<td align="left">-</td>
+<td align="left">Alm</td>
+<td align="left">Hero of Prophecy</td>
+</tr>
+<tr class="even">
+<td align="left">Amelia: Rose of the War</td>
+<td align="left">Slaying Axe+</td>
+<td align="left">-</td>
+<td align="left">Sacred Cowl</td>
+<td align="left">Earth Boost 3</td>
+<td align="left">-</td>
+<td align="left">Armor March 3</td>
+<td align="left">Amelia</td>
+<td align="left">Rose of the War</td>
+</tr>
+</tbody>
+</table>
+<p>Interestingly, when we look at the <code>skills</code> data.frame, we see that it has 8 characters there that aren’t in our <code>max_stats</code> data.frame. Seven of them are Non-Playable Characters (NPCs) since they are villains, but one of them, Marth: Altean Groom, as of the writing of this post is still unreleased. Let’s remove them from our <code>skills</code> data.frame:</p>
+<pre class="r"><code>skills$FullName[!skills$FullName %in% max_stats$FullName]</code></pre>
+<pre><code>## [1] &quot;???: Masked Knight&quot;         &quot;Helbindi: Savage Scourge&quot;  
+## [3] &quot;Laegjarn: Sheathed Steel&quot;   &quot;Laevatein: Searing Steel&quot;  
+## [5] &quot;Loki: The Trickster&quot;        &quot;Marth: Altean Groom&quot;       
+## [7] &quot;Surtr: Ruler of Flame&quot;      &quot;Veronica: Emblian Princess&quot;</code></pre>
+<pre class="r"><code>skills &lt;- skills[skills$FullName %in% max_stats$FullName, ]</code></pre>
+</div>
+<div id="s4-objects-in-r" class="section level1">
+<h1>S4 objects in R</h1>
+<p>In simple terms, in R, S4 objects are elements which define instances of a given class, and these instances can be given attributes in slots. Therefore, for example, an instance “dog” of a class “pet” can be given the value 4 in the “paws” slot. In our case, we’ll be using slots for each element of a character’s structure we mentioned in the first section.</p>
+<pre class="r"><code>setClass(&quot;hero&quot;, representation(Name = &#39;character&#39;,
+                                Title = &#39;character&#39;,
+                                Color = &#39;character&#39;,
+                                MoveType = &#39;character&#39;,
+                                WeaponType = &#39;character&#39;,
+                                Stats = &#39;list&#39;,
+                                Weapon = &#39;character&#39;,
+                                Assist = &#39;character&#39;,
+                                Special = &#39;character&#39;,
+                                PassiveA = &#39;character&#39;,
+                                PassiveB = &#39;character&#39;,
+                                PassiveC = &#39;character&#39;))</code></pre>
+<p>We can define an “initialize” method which can define how our objects should be initiated. In this case, I made it so that hero slots are automatically filled once the class instance is created (the <code>for</code> loop). This way, we can start making modifications to the object as soon as it is created. For example, in the <code>if</code> statement I’m making sure that if the object was initialized with a “full name”, that is, a name as well as a title, that these two would be separated and inserted into their own correct slots.</p>
+<pre class="r"><code>setMethod(&quot;initialize&quot;, signature = &quot;hero&quot;,
+          function(.Object, ...){
+              arguments &lt;- list(...)
+              for(arg_name in names(arguments)){
+                  slot(.Object, arg_name) &lt;- arguments[[arg_name]]
+              }
+              if(.Object@Name %in% max_stats$FullName){
+                  name_title &lt;- strsplit(.Object@Name, split = &quot;: &quot;)[[1]]
+                  .Object@Name &lt;- name_title[1]
+                  .Object@Title &lt;- name_title[2]
+              }
+              validObject(.Object)
+              return(.Object)
+          }
+)</code></pre>
+<pre><code>## [1] &quot;initialize&quot;</code></pre>
+<p>The <code>validObject</code> function is used so we can check the validity of our object by creating a few rules inside a function which will check the contents of arguments when a hero instance is initialized. To do this, we must redefine our “hero” class and add the <code>validity</code> argument.</p>
+<p>For example, in the <code>check_hero</code> function below I check whether the given character name is in either the ‘Name’ column or the ‘FullName’ column of the max_stats table. If it is present only in the ‘Name’ column and there are duplicates present, a.k.a. different versions of the same hero, then an error message is thrown, giving the full name of all of the hero’s duplicates, one of which should be inserted instead.</p>
+<pre class="r"><code>check_hero &lt;- function(object){
+    errors &lt;- character()
+    
+    name &lt;- object@Name
+    title &lt;- object@Title
+    
+    if(!(name %in% max_stats$Name) &amp; !(name %in% max_stats$FullName)){
+        msg &lt;- &quot;Invalid character name&quot;
+        errors &lt;- c(errors, msg)
+    }
+    if(sum(max_stats$Name == name) &gt; 1 &amp; length(title) == 0){
+        dupes &lt;- max_stats$FullName[max_stats$Name == name]
+        msg &lt;- paste0(&quot;Did you mean &quot;, 
+                      paste(c(paste0(&quot;&#39;&quot;, dupes[1:length(dupes)-1], collapse=&quot;&#39;, &quot;), 
+                              &quot;&#39; or &quot;, 
+                              paste0(&quot;&#39;&quot;, dupes[length(dupes)], &quot;&#39;?&quot;)), 
+                            collapse=&quot;&quot;))
+        errors &lt;- c(errors, msg)
+    }
+    if (length(errors) == 0) TRUE else errors
+}
+
+setClass(&quot;hero&quot;, representation(Name = &#39;character&#39;,
+                                Title = &#39;character&#39;,
+                                Color = &#39;character&#39;,
+                                MoveType = &#39;character&#39;,
+                                WeaponType = &#39;character&#39;,
+                                Weapon = &#39;character&#39;,
+                                Stats = &#39;list&#39;,
+                                WeaponName = &#39;character&#39;,
+                                Assist = &#39;character&#39;,
+                                Special = &#39;character&#39;,
+                                PassiveA = &#39;character&#39;,
+                                PassiveB = &#39;character&#39;,
+                                PassiveC = &#39;character&#39;), 
+         validity = check_hero)</code></pre>
+<p>All these things can be a bit daunting, so let’s check some examples:</p>
+<pre class="r"><code># New instances of a class can be created with the new() function
+not_a_hero &lt;- new(&quot;hero&quot;, Name=&quot;hercule satan&quot;) # Throws an invalid character name error</code></pre>
+<pre><code>## Error in validObject(.Object): invalid class &quot;hero&quot; object: Invalid character name</code></pre>
+<pre class="r"><code>lyn &lt;- new(&quot;hero&quot;, Name=&quot;lyn&quot;) # Also invalid, since all lowercase names weren&#39;t supported </code></pre>
+<pre><code>## Error in validObject(.Object): invalid class &quot;hero&quot; object: Invalid character name</code></pre>
+<pre class="r"><code>lyn &lt;- new(&quot;hero&quot;, Name=&quot;Lyn&quot;) # Throws an error since there are (so many) duplicates</code></pre>
+<pre><code>## Error in validObject(.Object): invalid class &quot;hero&quot; object: Did you mean &#39;Lyn: Brave Lady&#39;, &#39;Lyn: Bride of the Plains&#39;, &#39;Lyn: Lady of the Plains&#39;, &#39;Lyn: Lady of the Wind&#39; or &#39;Lyn: Wind&#39;s Embrace&#39;?</code></pre>
+<pre class="r"><code>lyn &lt;- new(&quot;hero&quot;, Name=&quot;Lyn: Brave Lady&quot;) # Works
+lyn@Name</code></pre>
+<pre><code>## [1] &quot;Lyn&quot;</code></pre>
+<pre class="r"><code>lyn@Title</code></pre>
+<pre><code>## [1] &quot;Brave Lady&quot;</code></pre>
+<pre class="r"><code>abel &lt;- new(&quot;hero&quot;, Name = &quot;Abel&quot;) # Works, since there are no special hero duplicates for Abel ):</code></pre>
+<p>We can see that the error messages above come from the <code>validObject</code> function, which called our <code>check_hero</code> function to evaluate the objects we were creating. Had we not called <code>validObject</code> inside our <code>initialize</code> method, we could create heroes objects with whichever <code>@Name</code> and <code>@Title</code> slots we wanted, which would tend to complicate things. Also, with this validity, we can add more rules to our <code>initialize</code> method and automatically populate our objects with the data we obtained previously, such as stats and skills:</p>
+<pre class="r"><code>setMethod(&quot;initialize&quot;, signature = &quot;hero&quot;,
+          function(.Object, ...){
+              arguments &lt;- list(...)
+              # Fill slots with given info
+              for(arg_name in names(arguments)){
+                  slot(.Object, arg_name) &lt;- arguments[[arg_name]]
+              }
+              # Get name and title for full-named heroes
+              if(.Object@Name %in% max_stats$FullName){
+                  name_title &lt;- strsplit(.Object@Name, split = &quot;: &quot;)[[1]]
+                  .Object@Name &lt;- name_title[1]
+                  .Object@Title &lt;- name_title[2]
+              }
+              # Get title when only Name is provided
+              if(sum(max_stats$Name == .Object@Name) == 1){
+                  name_title &lt;- max_stats$FullName[max_stats$Name == .Object@Name]
+                  .Object@Title &lt;- strsplit(name_title, split = &quot;: &quot;)[[1]][2]
+              }
+              
+              # Use name and title to get weapon type, movement type, color and weapon
+              slot_names &lt;- c(&quot;WeaponType&quot;, &quot;MoveType&quot;, &quot;Color&quot;, &quot;Weapon&quot;)
+              for(slot_name in slot_names){
+                  slot(.Object, slot_name) &lt;- max_stats[, slot_name][max_stats$Name == .Object@Name &amp;
+                                                                         max_stats$Title == .Object@Title]
+              }
+              
+              # Get stats
+              stat_names &lt;- c(&quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;)
+              stat_list &lt;- list()
+              for(stat_name in stat_names){
+                  stat_list[[stat_name]] &lt;- max_stats[, stat_name][max_stats$Name == .Object@Name &amp;
+                                                                         max_stats$Title == .Object@Title]
+              }
+              names(stat_list) &lt;- stat_names
+              .Object@Stats &lt;- stat_list
+              
+              # Get skills
+              skill_names &lt;- c(&quot;WeaponName&quot;, &quot;Assist&quot;, &quot;Special&quot;, &quot;PassiveA&quot;, &quot;PassiveB&quot;, &quot;PassiveC&quot;)
+              for(skill_name in skill_names){
+                  slot(.Object, skill_name) &lt;- skills[, skill_name][max_stats$Name == .Object@Name &amp;
+                                                                         max_stats$Title == .Object@Title]
+              }
+              validObject(.Object)
+              return(.Object)
+          }
+)</code></pre>
+<pre><code>## [1] &quot;initialize&quot;</code></pre>
+<p>We should probably add some more conditions to our <code>check_hero</code> function to account for any problems in all the new rules we added to the <code>initialize</code> method, but for brevity’s sake I’ll skip that.</p>
+<p>Now we have a nifty little function for creating hero type objects with quite a bit of info in them! Let’s see it in action:</p>
+<pre class="r"><code>abel &lt;- new(&quot;hero&quot;, Name = &quot;Abel&quot;)
+lyn &lt;- new(&quot;hero&quot;, Name = &quot;Lyn: Brave Lady&quot;)
+lyn</code></pre>
+<pre><code>## An object of class &quot;hero&quot;
+## Slot &quot;Name&quot;:
+## [1] &quot;Lyn&quot;
+## 
+## Slot &quot;Title&quot;:
+## [1] &quot;Brave Lady&quot;
+## 
+## Slot &quot;Color&quot;:
+## [1] &quot;Colorless&quot;
+## 
+## Slot &quot;MoveType&quot;:
+## [1] &quot;Cavalry&quot;
+## 
+## Slot &quot;WeaponType&quot;:
+## [1] &quot;Colorless Bow&quot;
+## 
+## Slot &quot;Weapon&quot;:
+## [1] &quot;Bow&quot;
+## 
+## Slot &quot;Stats&quot;:
+## $HP
+## [1] 35
+## 
+## $ATK
+## [1] 33
+## 
+## $SPD
+## [1] 35
+## 
+## $DEF
+## [1] 18
+## 
+## $RES
+## [1] 28
+## 
+## 
+## Slot &quot;WeaponName&quot;:
+## [1] &quot;Mulagir&quot;
+## 
+## Slot &quot;Assist&quot;:
+## [1] &quot;-&quot;
+## 
+## Slot &quot;Special&quot;:
+## [1] &quot;Draconic Aura&quot;
+## 
+## Slot &quot;PassiveA&quot;:
+## [1] &quot;Swift Sparrow 2&quot;
+## 
+## Slot &quot;PassiveB&quot;:
+## [1] &quot;Sacae&#39;s Blessing&quot;
+## 
+## Slot &quot;PassiveC&quot;:
+## [1] &quot;Atk Smoke 3&quot;</code></pre>
+<p>We can now easily create a simple battle simulator function to put our heroes into combat and see which one is the best! To do this, we must create a new generic function using the <code>setGeneric</code> function, and its corresponding method with the <code>setMethod</code> function:</p>
+<pre class="r"><code>setGeneric(&#39;combat&#39;, function(atk_hero, def_hero){
+    standardGeneric(&#39;combat&#39;)
+})</code></pre>
+<pre><code>## [1] &quot;combat&quot;</code></pre>
+<pre class="r"><code>setMethod(&#39;combat&#39;, signature(&#39;hero&#39;), 
+          function(atk_hero, def_hero){
+              # Things go here!
+          }
+)</code></pre>
+<pre><code>## [1] &quot;combat&quot;</code></pre>
+<p>It’s probably worth mentioning that in Fire Emblem Heroes, combat happens between two heroes by comparing the attacking hero’s ATK stat with the defending hero’s DEF stat, and the difference is depleted from the defending hero’s HP. If the defending hero still has remaning HP, it can then counterattack in the same way. Finally, if any of the heroes have 5 or more speed than the other, that hero can then attack the opponent again. There are a few other dynamics involved as well, particularly involving heroes’ skills, but for this post let’s focus on this core mechanic.</p>
+<pre class="r"><code>setGeneric(&#39;combat&#39;, function(atk_hero, def_hero){
+    standardGeneric(&#39;combat&#39;)
+})</code></pre>
+<pre><code>## [1] &quot;combat&quot;</code></pre>
+<pre class="r"><code>setMethod(&#39;combat&#39;, signature(&#39;hero&#39;), 
+          function(atk_hero, def_hero){
+              hp_atk &lt;- atk_hero@Stats$HP
+              hp_def &lt;- def_hero@Stats$HP
+              
+              hp_def &lt;- hp_def - (atk_hero@Stats$ATK - def_hero@Stats$DEF)
+              
+              if(hp_def &lt;= 0){
+                  return(paste(def_hero@Name, &quot;is defeated!&quot;))
+              }else{
+                  hp_atk &lt;- hp_atk - (def_hero@Stats$ATK - atk_hero@Stats$DEF)
+                  if(hp_atk &lt;= 0){
+                      return(paste(atk_hero@Name, &quot;is defeated!&quot;))
+                  }
+              }
+              
+              if(hp_atk &gt; 0 &amp; hp_def &gt; 0){
+                  if(atk_hero@Stats$SPD - def_hero@Stats$SPD &gt;= 5){
+                      hp_def &lt;- hp_def - (atk_hero@Stats$ATK - def_hero@Stats$DEF)
+                  }else if(def_hero@Stats$SPD - atk_hero@Stats$SPD &gt;= 5){
+                      hp_atk &lt;- hp_atk - (def_hero@Stats$ATK - atk_hero@Stats$DEF)
+                  }
+              }
+              
+              if(hp_atk &gt; 0 &amp; hp_def &gt; 0){
+                  return(paste(atk_hero@Name, &quot;survived with&quot;, hp_atk, &quot;HP!&quot;,
+                               def_hero@Name, &quot;survived with&quot;, hp_def, &quot;HP!&quot;))
+              }else if(hp_atk &gt; 0 &amp; hp_def &lt;= 0){
+                  return(paste(def_hero@Name, &quot;is defeated!&quot;))
+              }else if(hp_def &gt; 0 &amp; hp_atk &lt;= 0){
+                  return(paste(atk_hero@Name, &quot;is defeated!&quot;))
+              }
+          }
+)</code></pre>
+<pre><code>## [1] &quot;combat&quot;</code></pre>
+<p>Just so I don’t have to make this function too overly complex, I’ll just hard code in the attack bonuses each unit gets from their weapons and skills. Abel gets +8 Attack and -5 Speed from his Brave Lance+, while Lyn gets +14 attack from her Mulagir bow. Abel also gets +5 HP from his HP +5 skill, while Lyn gets +4 Attack and Speed from her Swift Sparrow 2 skill.</p>
+<pre class="r"><code>abel@Stats$ATK &lt;- abel@Stats$ATK + 8
+abel@Stats$SPD &lt;- abel@Stats$SPD - 5
+abel@Stats$HP &lt;- abel@Stats$HP + 5
+
+lyn@Stats$ATK &lt;- lyn@Stats$ATK + 14
+lyn@Stats$ATK &lt;- lyn@Stats$ATK + 4
+lyn@Stats$SPD &lt;- lyn@Stats$SPD + 4</code></pre>
+<p>Finally, we can test the combat simulator out:</p>
+<pre class="r"><code># Abel starts the attack
+combat(abel, lyn)</code></pre>
+<pre><code>## [1] &quot;Abel is defeated!&quot;</code></pre>
+<pre class="r"><code># Lyn starts the attack
+combat(lyn, abel)</code></pre>
+<pre><code>## [1] &quot;Abel is defeated!&quot;</code></pre>
+<p>And the winner in both cases is Lyn! Granted, Brave Lyn is one of the best units in the game, while Abel is just lackluster at best. Nevertheless, we were able to showcase how much simpler it is to use objects for complex functions than it is to just keep querying data.frames all the time. Imagine if everytime we had to do something like <code>max_stats[max_stats$Name == &quot;Abel&quot;, &quot;HP&quot;]</code> to get Abel’s HP value or something like that! One could save these values inside a variable, but then we’d just have another data.frame or list; the S4 objects just seem a lot cleaner to me. Also, we were admitedly a bit sloppy, as most sources suggest creating functions for accessing the values of an object’s slots, instead of using the <code>@</code> operator. Also, we didn’t cover the full complexity of a character in the game, including its level, special and special cooldown time, IVs, Sacred Seals, merges, support, etc. In any case, I hope this was useful as an initial guide to help understand the value and possible use cases of the S4 objects class!</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

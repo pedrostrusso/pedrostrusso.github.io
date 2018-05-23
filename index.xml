@@ -6,10 +6,19 @@
     <description>Recent content on Red Stone Data</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 05 Apr 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 23 May 2018 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>S4 Classes in R with Fire Emblem Heroes Data</title>
+      <link>/2018/05/23/s4-classes-in-r-with-fire-emblem-heroes-data/</link>
+      <pubDate>Wed, 23 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/2018/05/23/s4-classes-in-r-with-fire-emblem-heroes-data/</guid>
+      <description>IntroductionFollowing my last few posts, in this entry we’ll again work with Fire Emblem Heroes data but on the subject of Object-Oriented Programming (OOP) in R. R has been described before as being a bit awkward with respect to OOP, with 3 different types of class systems: S3, S4 and RC. In this quick post, we will focus on S4 classes and use them to build a generic character class.</description>
+    </item>
     
     <item>
       <title>Analyzing Fire Emblem Heroes data</title>
@@ -29,7 +38,7 @@ This is a continuation of my previous post, in which we scraped data about the m
       
       <guid>/2018/04/04/fire-emblem-heroes-data-with-rvest/</guid>
       <description>IntroductionIn this post, we will attempt to collect some data about the mobile game Fire Emblem Heroes by Intelligent Systems and Nintendo. To do this, we’ll use the rvest package to scrape data from the Fire Emblem Heroes Gamepedia page
-Loading packageslibrary(&amp;quot;rvest&amp;quot;)## Warning: package &amp;#39;rvest&amp;#39; was built under R version 3.4.4Scraping dataFire Emblem Heroes is a tactical RPG game in which players compete against the AI by trying to defeat their teams, composed of up to four characters (heroes).</description>
+Loading packageslibrary(&amp;quot;rvest&amp;quot;)Scraping dataFire Emblem Heroes is a tactical RPG game in which players compete against the AI by trying to defeat their teams, composed of up to four characters (heroes).</description>
     </item>
     
     <item>

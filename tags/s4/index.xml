@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>S4 on Red Stone Data</title>
+    <link>/tags/s4/</link>
+    <description>Recent content in S4 on Red Stone Data</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 23 May 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/s4/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>S4 Classes in R with Fire Emblem Heroes Data</title>
+      <link>/2018/05/23/s4-classes-in-r-with-fire-emblem-heroes-data/</link>
+      <pubDate>Wed, 23 May 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/2018/05/23/s4-classes-in-r-with-fire-emblem-heroes-data/</guid>
+      <description>IntroductionFollowing my last few posts, in this entry we’ll again work with Fire Emblem Heroes data but on the subject of Object-Oriented Programming (OOP) in R. R has been described before as being a bit awkward with respect to OOP, with 3 different types of class systems: S3, S4 and RC. In this quick post, we will focus on S4 classes and use them to build a generic character class.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -78,7 +78,6 @@
 <div id="loading-packages" class="section level1">
 <h1>Loading packages</h1>
 <pre class="r"><code>library(&quot;rvest&quot;)</code></pre>
-<pre><code>## Warning: package &#39;rvest&#39; was built under R version 3.4.4</code></pre>
 </div>
 <div id="scraping-data" class="section level1">
 <h1>Scraping data</h1>
@@ -91,13 +90,13 @@ webpage &lt;- read_html(url)</code></pre>
     html_table()
 max_stats &lt;- as.data.frame(max_stats)
 head(max_stats)</code></pre>
-<pre><code>##   X1                          X2 X3 X4 X5 X6 X7 X8 X9 X10
-## 1 NA                        Abel NA NA 39 33 32 25 25 154
-## 2 NA                     Alfonse NA NA 43 35 25 32 22 157
-## 3 NA Alfonse (Hares at the Fair) NA NA 41 35 33 30 18 157
-## 4 NA                         Alm NA NA 45 33 30 28 22 158
-## 5 NA                      Amelia NA NA 47 34 34 35 23 173
-## 6 NA                        Anna NA NA 41 29 38 22 28 158</code></pre>
+<pre><code>##   X1                      X2 X3 X4 X5 X6 X7 X8 X9 X10
+## 1 NA       Abel: The Panther NA NA 39 33 32 25 25 154
+## 2 NA Alfonse: Prince of Askr NA NA 43 35 25 32 22 157
+## 3 NA  Alfonse: Spring Prince NA NA 41 35 33 30 18 157
+## 4 NA   Alm: Hero of Prophecy NA NA 45 33 30 28 22 158
+## 5 NA Amelia: Rose of the War NA NA 47 34 34 35 23 173
+## 6 NA         Anna: Commander NA NA 41 29 38 22 28 158</code></pre>
 <p>As we can see, the function worked fine, except some of the things we want, namely the hero’s weapon and movement types are given as images, meaning that we’ll have to do just a bit more work to get that info.</p>
 <p>Let’s get the table information again, but this time, we’ll do it in a bit more roundabout fashion. The information we want, that is, a hero’s weapon and movement types, as well as their stats, are contained in the <code>&lt;tr&gt;</code> elements of the html. Therefore, we can use <code>rvest</code>’s <code>html_nodes</code> function to extract the relevant nodes. This can then be passed to the <code>html_attr</code> function to extract the “data-weapon-type” and “data-move-type” attributes of the <code>&lt;tr&gt;</code> elements and include them back into our data.frame.</p>
 <pre class="r"><code>max_stats$WeaponType &lt;- read_html(url) %&gt;%
@@ -112,13 +111,13 @@ max_stats$MoveType &lt;- read_html(url) %&gt;%
 names(max_stats) &lt;- c(&quot;Name&quot;, &quot;HP&quot;, &quot;ATK&quot;, &quot;SPD&quot;, &quot;DEF&quot;, &quot;RES&quot;, 
                       &quot;BST&quot;, &quot;WeaponType&quot;, &quot;MoveType&quot;)
 head(max_stats)</code></pre>
-<pre><code>##                          Name HP ATK SPD DEF RES BST WeaponType MoveType
-## 1                        Abel 39  33  32  25  25 154 Blue Lance  Cavalry
-## 2                     Alfonse 43  35  25  32  22 157  Red Sword Infantry
-## 3 Alfonse (Hares at the Fair) 41  35  33  30  18 157  Green Axe  Cavalry
-## 4                         Alm 45  33  30  28  22 158  Red Sword Infantry
-## 5                      Amelia 47  34  34  35  23 173  Green Axe  Armored
-## 6                        Anna 41  29  38  22  28 158  Green Axe Infantry</code></pre>
+<pre><code>##                      Name HP ATK SPD DEF RES BST WeaponType MoveType
+## 1       Abel: The Panther 39  33  32  25  25 154 Blue Lance  Cavalry
+## 2 Alfonse: Prince of Askr 43  35  25  32  22 157  Red Sword Infantry
+## 3  Alfonse: Spring Prince 41  35  33  30  18 157  Green Axe  Cavalry
+## 4   Alm: Hero of Prophecy 45  33  30  28  22 158  Red Sword Infantry
+## 5 Amelia: Rose of the War 47  34  34  35  23 173  Green Axe  Armored
+## 6         Anna: Commander 41  29  38  22  28 158  Green Axe Infantry</code></pre>
 <p>There are a few other tables with information about the game’s characters on the site, but for now this information is enough to get started. In my next post, I’ll start doing some exploratory analyses and see what kind of data we got.</p>
 </div>
 
