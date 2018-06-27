@@ -41,6 +41,12 @@ code {
   border-bottom: 1px solid #eaeaea;
 }
 
+.img-circle {
+    border-radius: 50%;
+    height: 350px;
+    width: 350px;
+}
+
 .nav {
   max-width: 800px;
   margin: 0 auto;
